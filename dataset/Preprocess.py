@@ -1,7 +1,7 @@
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 
 
 def missing_handler(df, target, thresh=0.25, impute=True):
@@ -18,30 +18,19 @@ def missing_handler(df, target, thresh=0.25, impute=True):
         elif prec < 1.0:
             impute_column.append(column)
     df = df.drop(drop_column, axis=1)
-
     if impute:
         '''
         TODO: Configure imputer rather than simply applying SimpleImputer
         '''
         # 1 define transformer of numberical data #(Firstly handle the missing value and then secondly encoding the )
-        numerical_transformer = Pipeline(steps=[
-            ("Imputer", SimpleImputer(strategy="mean")),
-            ("scaler", StandardScaler())]
-        )
+        numerical_transformer = [("Impute", SimpleImputer(strategy="mean"))]
 
         # 3 define transformer of categorical data #(Firstly handle the missing value and then secondly encoding the )
-        categorical_transformer = Pipeline(steps=[
-            ("Imputer", SimpleImputer(strategy="most_frequent")),
-            ("Onehot", OneHotEncoder(handle_unknown='ignore'))]
-        )
+        categorical_transformer = [("Impute", SimpleImputer(strategy="most_frequent"))]
     else:
         df = df.dropna(axis=0)
-        numerical_transformer = Pipeline(steps=[
-            ("scaler", StandardScaler())]
-        )
-        categorical_transformer = Pipeline(steps=[
-            ("Onehot", OneHotEncoder(handle_unknown='ignore'))]
-        )
+        numerical_transformer = []
+        categorical_transformer = []
     return df, numerical_transformer, categorical_transformer
 
 
@@ -55,8 +44,10 @@ class Preprocess:
         self.df = df
         assert target in self.df, "Target column not in given dataframe, please check!"
         self.df, self.num_handler, self.cat_handler = missing_handler(self.df, target, missing_threshold, impute=impute)
+        self.tar_handler = LabelEncoder()
         self.y = self.df[target]
         self.X = self.df.drop([target], axis=1)
+
         # self.dev_x, self.test_x, self.dev_y, self.test_y = train_test_split(self.X, self.y, test_size=test_size,
         #                                                                     random_state=seed)
         # self.train_x, self.val_x, self.train_y, self.val_y = train_test_split(self.dev_x, self.dev_y,
@@ -69,27 +60,28 @@ class Preprocess:
                 cate_f = list(t[(t == "object") | (t == "bool")].index)
             if not num_f:
                 num_f = list(filter(lambda x: x not in cate_f, columns))
+            self.num_handler += [("scaler", StandardScaler())]
+            self.cat_handler += [("onehot", OneHotEncoder())]
+            num_transformer = Pipeline(steps=self.num_handler)
+            cate_transformer = Pipeline(steps=self.cat_handler)
             preprocessor = ColumnTransformer(
                 transformers=[
-                    ("num", self.num_handler, num_f),
-                    ("cat", self.cat_handler, cate_f)]
+                    ("num", num_transformer, num_f),
+                    ("cat", cate_transformer, cate_f)
+                ]
             )
             return preprocessor
 
         self.preprocessor = make_pipeline(num_features, cate_features)
 
-    def __fit__(self, X=None):
-        if not X:
-            self.preprocessor.fit(self.X)
-        else:
-            self.preprocessor.fit(X)
+    def fit_column(self):
+        self.preprocessor.fit(self.X)
 
-    def transform(self, X=None):
-        if not X:
-            df = self.preprocessor.transform(X)
-        else:
-            df = self.preprocessor.transform(self.X)
-        return df
+    def fit_y(self):
+        self.tar_handler.fit(self.y)
 
-    def get_pipeline(self):
+    def get_column_pipeline(self):
         return self.preprocessor
+
+    def get_target_pipeline(self):
+        return self.tar_handler
