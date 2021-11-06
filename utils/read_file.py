@@ -5,6 +5,7 @@ def read_from_csv(file="https://media.githubusercontent.com/media/Morris135212/"
                        "DataSet/main/transaction/transaction.csv",
                   index_col=0,
                   columns=None):
+    assert file.endswith("csv") or file.endswith("txt"), "Not a required input type"
     if not columns:
         df = pd.read_csv(file, index_col=index_col)
     else:

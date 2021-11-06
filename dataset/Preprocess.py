@@ -1,10 +1,7 @@
-from sklearn.compose import make_column_transformer, ColumnTransformer
+from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
-
-from utils.read_file import read_from_csv
 
 
 def missing_handler(df, target, thresh=0.25, impute=True):
@@ -49,13 +46,13 @@ def missing_handler(df, target, thresh=0.25, impute=True):
 
 
 class Preprocess:
-    def __init__(self, file, target,
+    def __init__(self, df, target,
                  impute=False,
                  missing_threshold=0.25,
                  num_features=None,
                  cate_features=None):
-        assert file.endswith("csv") or file.endswith("txt"), "Not a required data type"
-        self.df = read_from_csv(file)
+
+        self.df = df
         assert target in self.df, "Target column not in given dataframe, please check!"
         self.df, self.num_handler, self.cat_handler = missing_handler(self.df, target, missing_threshold, impute=impute)
         self.y = self.df[target]
