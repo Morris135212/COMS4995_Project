@@ -5,5 +5,5 @@ if __name__ == "__main__":
            "DataSet/main/transaction/transaction.csv"
     p = Preprocess(file=file, target="isFraud")
     p.__fit__()
-    train_X = p.transform(p.train_x)
-    print(train_X)
+    X = p.transform(p.X)
+    print(X)

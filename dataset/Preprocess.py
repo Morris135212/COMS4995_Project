@@ -52,21 +52,18 @@ class Preprocess:
     def __init__(self, file, target,
                  impute=False,
                  missing_threshold=0.25,
-                 test_size=0.2,
-                 val_size=0.25,
                  num_features=None,
-                 cate_features=None,
-                 seed=43):
+                 cate_features=None):
         assert file.endswith("csv") or file.endswith("txt"), "Not a required data type"
         self.df = read_from_csv(file)
         assert target in self.df, "Target column not in given dataframe, please check!"
         self.df, self.num_handler, self.cat_handler = missing_handler(self.df, target, missing_threshold, impute=impute)
         self.y = self.df[target]
         self.X = self.df.drop([target], axis=1)
-        self.dev_x, self.test_x, self.dev_y, self.test_y = train_test_split(self.X, self.y, test_size=test_size,
-                                                                            random_state=seed)
-        self.train_x, self.val_x, self.train_y, self.val_y = train_test_split(self.dev_x, self.dev_y,
-                                                                              test_size=val_size, random_state=seed)
+        # self.dev_x, self.test_x, self.dev_y, self.test_y = train_test_split(self.X, self.y, test_size=test_size,
+        #                                                                     random_state=seed)
+        # self.train_x, self.val_x, self.train_y, self.val_y = train_test_split(self.dev_x, self.dev_y,
+        #                                                                       test_size=val_size, random_state=seed)
 
         def make_pipeline(num_f=None, cate_f=None):
             t = self.X.dtypes
@@ -84,13 +81,18 @@ class Preprocess:
 
         self.preprocessor = make_pipeline(num_features, cate_features)
 
-    def __fit__(self, X=None, y=None):
-        if not X or not y:
-            self.preprocessor.fit(self.train_x, self.train_y)
-        elif X and y:
-            self.preprocessor.fit(X, y)
+    def __fit__(self, X=None):
+        if not X:
+            self.preprocessor.fit(self.X)
+        else:
+            self.preprocessor.fit(X)
 
-    def transform(self, X=None, y=None):
-        df = self.preprocessor.transform(X)
-        print(df)
+    def transform(self, X=None):
+        if not X:
+            df = self.preprocessor.transform(X)
+        else:
+            df = self.preprocessor.transform(self.X)
         return df
+
+    def get_pipeline(self):
+        return self.preprocessor
