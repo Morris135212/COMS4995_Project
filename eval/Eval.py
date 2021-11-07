@@ -1,32 +1,37 @@
 import torch
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-from dataset.Dataset import CustomDataset
 from torch.autograd import Variable
-from sklearn.metrics import accuracy_score, roc_auc_score, recall_score, precision_score
+
+
+def binary_accuracy(preds, y):
+    rounded_preds = torch.round(preds)
+    correct = (rounded_preds == y).float()
+    acc = correct.sum() / len(correct)
+    return acc
 
 
 class Evaluator:
-    def __init__(self, val_loader, model, device):
-        self.val_loader = DataLoader(val_loader)
+    def __init__(self, val_loader, model, device, cls, criterion):
+        self.val_loader = val_loader
         self.device = device
         self.model = model
         self.model.eval()
+        self.cls = cls
+        self.criterion = criterion
 
     def eval(self):
-        labels, pred = [], []
-        for i, data in enumerate(tqdm(self.val_loader), 0):
-            X, y = data
-            X = X.to(torch.float32)
-            y = y.to(torch.float32)
-            X = Variable(X).to(self.device)
-            y = Variable(y).to(self.device).reshape(1, -1)
-            output = self.model(X)
-            pred.append(output[0][0])
-            labels.append(y[0])
-        Acc = accuracy_score(labels, pred)
-        auc = roc_auc_score(labels, pred)
-        recall = recall_score(labels, pred)
-        precision = precision_score(labels, pred)
-        return {"accuracy": Acc, "auc": auc, "recall": recall, "precision": precision}
+        epoch_loss, epoch_acc = 0., 0.
+        length = 0
+        with torch.no_grad():
+            for i, data in enumerate(self.val_loader):
+                X, y = data
+                X = Variable(X.to(torch.float32)).to(self.device)
+                y = Variable(y.to(torch.float32)).to(self.device)
+                output = self.model(X)
+                if self.cls == 1:
+                    output = output.squeeze()
+                    pred = torch.round(output)
+                    epoch_acc += binary_accuracy(pred, y).item() * len(y)
+                    epoch_loss += self.criterion(output, y).item() * len(y)
+                    length += len(y)
 
+        return {"acc": epoch_acc/length, "loss": epoch_loss/length}

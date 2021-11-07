@@ -3,8 +3,10 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from dataset.Dataset import CustomDataset
-from eval.Eval import Evaluator
+from eval.Eval import Evaluator, binary_accuracy
 from model.ANN import Model
+from torch.utils.tensorboard import SummaryWriter
+from utils.torchtools import EarlyStopping
 
 
 class Trainer:
@@ -13,52 +15,86 @@ class Trainer:
                  val: tuple,
                  input_size,
                  cls,
+                 writer=SummaryWriter('runs/fashion_mnist_experiment_1'),
                  optimizer="sgd",
                  epochs=10,
                  batch_size=64,
                  lr=1e-5,
-                 momentum=1e-5):
+                 momentum=1e-5,
+                 interval=10,
+                 patience=10,
+                 path="data/checkpoints/checkpoint.pt"):
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         train_dataset = CustomDataset(train[0], train[1])
         self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         self.batch_size = batch_size
         val_dataset = CustomDataset(val[0], val[1])
-        self.val_loader = DataLoader(val_dataset)
+        self.val_loader = DataLoader(val_dataset, batch_size=batch_size)
 
         self.epochs = epochs
-        if cls==1:
-            self.criterion = torch.nn.BCELoss() # Binary cross entropy
+        if cls == 1:
+            self.criterion = torch.nn.BCELoss()  # Binary cross entropy
         else:
-            self.criterion = torch.nn.CrossEntropyLoss() # Cross Entropy Loss
+            self.criterion = torch.nn.CrossEntropyLoss()  # Cross Entropy Loss
 
         self.model = Model(input_size=input_size, output_size=cls)
+        self.cls = cls
         if optimizer == "adam":
             self.optim = torch.optim.Adam(self.model.parameters(), lr=lr)
         elif optimizer == "sgd":
             self.optim = torch.optim.SGD(self.model.parameters(), lr=lr, momentum=momentum)
+        self.writer = writer
+        self.interval = interval
+        self.early_stopping = EarlyStopping(patience=patience, verbose=True, path=path)
 
     def train(self):
         print("Start Training")
         self.model.to(self.device)
         for epoch in range(self.epochs):
-            epoch_loss = []
+            print(f"At epoch: {epoch}")
+            total_loss, epoch_loss, epoch_acc = 0., 0., 0.
+            length = 0
             for i, data in enumerate(tqdm(self.train_loader), 0):
+                self.model.train()
+
                 x, label = data
                 x = x.to(torch.float32)
                 label = label.to(torch.float32)
                 x = Variable(x).to(self.device)
-                y = Variable(label).to(self.device).reshape(self.batch_size, -1)
-                self.model.train()
-
+                y = Variable(label).to(self.device)
                 output = self.model(x)
-                loss = self.criterion(output, y)
-                epoch_loss.append(loss.item())
+
+                if self.cls == 1:
+                    output = output.squeeze()
+                    loss = self.criterion(output, y)
+                    pred = torch.round(output)
+                    epoch_loss += loss.item() * len(label)
+                    epoch_acc += binary_accuracy(pred, y.squeeze()).item() * len(label)
+                    length += len(label)
+                else:
+                    loss = self.criterion(output, y)
+                    """
+                    TODO multi-classification
+                    """
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
-                if i % 100 == 99:
-                    evaluator = Evaluator(self.val_loader, model=self.model, device=self.device)
+                if i % self.interval == self.interval - 1:
+                    print(f"Training loss: {loss.item()}")
+                    evaluator = Evaluator(self.val_loader,
+                                          model=self.model,
+                                          device=self.device,
+                                          cls=self.cls,
+                                          criterion=self.criterion)
                     results = evaluator.eval()
-                    acc, auc, recall, precision = results["accuracy"], results["auc"], results["recall"], results["precision"]
-                    print(f"At epoch {epoch}, Acc: {acc}, Roc-Auc: {auc}, Recall: {recall}, Precision: {precision}")
+                    eval_acc, eval_loss = results["acc"], results["loss"]
+                    print(f"At epoch {epoch}, eval Acc: {eval_acc}, train Acc: {epoch_acc / length},"
+                          f"train loss: {epoch_loss / length}, val loss: {eval_loss}")
 
+                    self.writer.add_scalars('loss/', {"eval_loss": eval_loss,
+                                                      "train_loss": epoch_loss / length},
+                                            epoch * len(self.train_loader) + i)
+                    self.writer.add_scalars('accuracy/', {"eval_acc": eval_acc,
+                                                          "train_acc": epoch_acc / length},
+                                            epoch * len(self.train_loader) + i)
+                    self.early_stopping(eval_loss, self.model)
