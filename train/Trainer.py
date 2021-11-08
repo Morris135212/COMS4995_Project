@@ -98,3 +98,5 @@ class Trainer:
                                                           "train_acc": epoch_acc / length},
                                             epoch * len(self.train_loader) + i)
                     self.early_stopping(eval_loss, self.model)
+            if self.early_stopping.early_stop:
+                break

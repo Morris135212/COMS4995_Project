@@ -41,7 +41,6 @@ class MissingHandler:
                 n_transformer = []
                 c_transformer = []
             return df, n_transformer, c_transformer
-
         self.df, self.num_transformer, self.cate_transformer = missing_handler(num_imputer, cate_imputer)
 
     def get_dataframe(self):
