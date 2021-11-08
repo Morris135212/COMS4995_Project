@@ -3,7 +3,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from dataset.Dataset import CustomDataset
-from eval.Eval import Evaluator, binary_accuracy
+from eval.Eval import Evaluator, binary_accuracy_tensor
 from model.ANN import Model
 from torch.utils.tensorboard import SummaryWriter
 from utils.torchtools import EarlyStopping
@@ -28,9 +28,8 @@ class Trainer:
         train_dataset = CustomDataset(train[0], train[1])
         self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         self.batch_size = batch_size
-        val_dataset = CustomDataset(val[0], val[1])
-        self.val_loader = DataLoader(val_dataset, batch_size=batch_size)
-
+        self.valset = val
+        self.trainset = train
         self.epochs = epochs
         if cls == 1:
             self.criterion = torch.nn.BCELoss()  # Binary cross entropy
@@ -58,8 +57,8 @@ class Trainer:
                 self.model.train()
 
                 x, label = data
-                x = x.to(torch.float32)
-                label = label.to(torch.float32)
+                x = x.float()
+                label = label.float()
                 x = Variable(x).to(self.device)
                 y = Variable(label).to(self.device)
                 output = self.model(x)
@@ -67,9 +66,8 @@ class Trainer:
                 if self.cls == 1:
                     output = output.squeeze()
                     loss = self.criterion(output, y)
-                    pred = torch.round(output)
                     epoch_loss += loss.item() * len(label)
-                    epoch_acc += binary_accuracy(pred, y.squeeze()).item() * len(label)
+                    epoch_acc += binary_accuracy_tensor(output, y.squeeze()).item() * len(label)
                     length += len(label)
                 else:
                     loss = self.criterion(output, y)
@@ -80,8 +78,7 @@ class Trainer:
                 loss.backward()
                 self.optim.step()
                 if i % self.interval == self.interval - 1:
-                    print(f"Training loss: {loss.item()}")
-                    evaluator = Evaluator(self.val_loader,
+                    evaluator = Evaluator(self.valset,
                                           model=self.model,
                                           device=self.device,
                                           cls=self.cls,
@@ -98,5 +95,7 @@ class Trainer:
                                                           "train_acc": epoch_acc / length},
                                             epoch * len(self.train_loader) + i)
                     self.early_stopping(eval_loss, self.model)
+                del x
+                del y
             if self.early_stopping.early_stop:
                 break

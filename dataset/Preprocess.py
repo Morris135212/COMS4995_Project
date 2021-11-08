@@ -1,4 +1,3 @@
-import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
@@ -41,6 +40,7 @@ class MissingHandler:
                 n_transformer = []
                 c_transformer = []
             return df, n_transformer, c_transformer
+
         self.df, self.num_transformer, self.cate_transformer = missing_handler(num_imputer, cate_imputer)
 
     def get_dataframe(self):
@@ -72,12 +72,14 @@ class Preprocess:
                 num_f = list(filter(lambda x: x not in cate_f, columns))
             num_transformer = Pipeline(steps=self.missing_handler.num_transformer +
                                              [("scaler", StandardScaler())])
-            cate_transformer = Pipeline(steps=self.missing_handler.cate_transformer +
+            oh_cate_transformer = Pipeline(steps=self.missing_handler.cate_transformer +
                                               [("onehot", OneHotEncoder(handle_unknown="ignore"))])
+            # tar_cate_transformer = Pipeline(steps=self.missing_handler.cate_transformer +
+            #                                   [("onehot", TargetEncoder(handle_unknown="value"))])
             preprocessor = ColumnTransformer(
                 transformers=[
                     ("num", num_transformer, num_f),
-                    ("cat", cate_transformer, cate_f)
+                    ("cat", oh_cate_transformer, cate_f)
                 ]
             )
             return preprocessor
@@ -89,7 +91,7 @@ class Preprocess:
         self.fit_y()
 
     def fit_column(self):
-        self.preprocessor.fit(self.X)
+        self.preprocessor.fit(self.X, self.y)
 
     def fit_y(self):
         self.tar_handler.fit(self.y)

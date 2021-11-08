@@ -9,19 +9,18 @@ class Model(nn.Module):
         self.cls = output_size
         self.bn_in = nn.BatchNorm1d(input_size)
 
-        self.fc1 = nn.Linear(input_size, 4096)
-        self.bn1 = nn.BatchNorm1d(4096)
+        self.fc1 = nn.Linear(input_size, 1024)
+        self.bn1 = nn.BatchNorm1d(1024)
 
-        self.fc2 = nn.Linear(4096, 1024)
-        self.bn2 = nn.BatchNorm1d(1024)
+        self.fc2 = nn.Linear(1024, 256)
+        self.bn2 = nn.BatchNorm1d(256)
 
-        self.fc3 = nn.Linear(1024, 256)
-        self.fc4 = nn.Linear(256, output_size)
+        self.fc3 = nn.Linear(256, 64)
+        self.fc4 = nn.Linear(64, output_size)
         self.drop = dropout
 
     def forward(self, X):
         X = F.relu(self.fc1(X))
-
         X = self.bn1(X)
         X = F.relu(self.fc2(X))
         X = F.dropout(X, self.drop)
