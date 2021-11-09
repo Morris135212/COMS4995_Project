@@ -18,7 +18,7 @@ def binary_accuracy_numpy(preds, y):
 
 
 class Evaluator:
-    def __init__(self, val, model, device, cls, criterion):
+    def __init__(self, val, model, device, cls, criterion=torch.nn.BCELoss()):
         self.val_x, self.val_y = val[0], val[1]
         self.device = device
         self.model = model
@@ -39,6 +39,5 @@ class Evaluator:
                 loss = self.criterion(preds, y).item()
                 acc = binary_accuracy_tensor(preds, y)
                 self.pred = preds.cpu().numpy()
-        del x
-        del y
+        del x, y
         return {"acc": acc, "loss": loss}

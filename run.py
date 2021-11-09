@@ -22,20 +22,20 @@ if __name__ == "__main__":
 
     train_x, train_y = p.preprocessor.transform(train_x), p.tar_handler.transform(train_y)
     val_x, val_y = p.preprocessor.transform(val_x), p.tar_handler.transform(val_y)
-    samples = Sampling(train_x, train_y, mechanism=SampleMechanism.under)
+    samples = Sampling(train_x, train_y, mechanism=SampleMechanism.SMOTE)
     train_x, train_y = samples.get_features(), samples.get_labels()
     from torch.utils.tensorboard import SummaryWriter
     # default `log_dir` is "runs" - we'll be more specific here
-    # writer = SummaryWriter('runs/fraud')
-    #
-    # trainer = Trainer((train_x, train_y),
-    #                   (val_x, val_y),
-    #                   train_x.shape[1],
-    #                   cls=1,
-    #                   writer=writer,
-    #                   lr=1e-3,
-    #                   interval=50)
-    # trainer.train()
+    writer = SummaryWriter('runs/fraud')
+
+    trainer = Trainer((train_x, train_y),
+                      (val_x, val_y),
+                      train_x.shape[1],
+                      cls=1,
+                      writer=writer,
+                      lr=1e-3,
+                      interval=50)
+    trainer.train()
     # val_dataset = CustomDataset(val_x, val_y)
     # val_loader = DataLoader(val_dataset, batch_size=32)
     # model = Model(input_size=train_x.shape[1], output_size=1)

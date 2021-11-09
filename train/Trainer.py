@@ -77,6 +77,7 @@ class Trainer:
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
+                del x, y
                 if i % self.interval == self.interval - 1:
                     evaluator = Evaluator(self.valset,
                                           model=self.model,
@@ -95,7 +96,5 @@ class Trainer:
                                                           "train_acc": epoch_acc / length},
                                             epoch * len(self.train_loader) + i)
                     self.early_stopping(eval_loss, self.model)
-                del x
-                del y
             if self.early_stopping.early_stop:
                 break
