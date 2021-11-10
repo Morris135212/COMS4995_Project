@@ -4,32 +4,31 @@ import torch
 
 
 class Model(nn.Module):
-    def __init__(self, input_size, output_size, dropout=0.5):
+    def __init__(self, input_size, output_size, n_hidden1=1024, n_hidden2=256):
         super(Model, self).__init__()
         self.cls = output_size
-        self.bn_in = nn.BatchNorm1d(input_size)
+        self.layer1 = nn.Sequential(
+            nn.Linear(input_size, n_hidden1),
+            nn.BatchNorm1d(n_hidden1),
+            nn.ReLU(True)
+        )
+        self.layer2 = nn.Sequential(
+            nn.Linear(n_hidden1, n_hidden2),
+            nn.BatchNorm1d(n_hidden2),
+            nn.ReLU(True)
+        )
 
-        self.fc1 = nn.Linear(input_size, 1024)
-        self.bn1 = nn.BatchNorm1d(1024)
-
-        self.fc2 = nn.Linear(1024, 256)
-        self.bn2 = nn.BatchNorm1d(256)
-
-        self.fc3 = nn.Linear(256, 64)
-        self.fc4 = nn.Linear(64, output_size)
-        self.drop = dropout
+        self.layer3 = nn.Sequential(
+            nn.Linear(n_hidden2, output_size)
+        )
 
     def forward(self, X):
-        X = F.relu(self.fc1(X))
-        X = self.bn1(X)
-        X = F.relu(self.fc2(X))
-        X = F.dropout(X, self.drop)
-        X = self.bn2(X)
-        X = F.relu(self.fc3(X))
-        X = F.dropout(X, self.drop)
+        X = self.layer1(X)
+        X = self.layer2(X)
+        X = self.layer3(X)
         if self.cls == 1:
-            X = torch.sigmoid(self.fc4(X))
+            X = torch.sigmoid(X)
         else:
-            X = F.softmax(self.fc4(X))
+            X = F.softmax(X)
         return X
 

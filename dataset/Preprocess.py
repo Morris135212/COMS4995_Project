@@ -56,9 +56,11 @@ class MissingHandler:
 class Preprocess:
     def __init__(self, X, y, missing_handler,
                  num_features=None,
-                 cate_features=None):
+                 cate_features=None,
+                 labels=None):
 
         self.tar_handler = LabelEncoder()
+        self.labels = labels
         self.y = y
         self.X = X
         self.missing_handler = missing_handler
@@ -94,7 +96,21 @@ class Preprocess:
         self.preprocessor.fit(self.X, self.y)
 
     def fit_y(self):
-        self.tar_handler.fit(self.y)
+        if self.labels:
+            self.tar_handler.fit(self.labels)
+        else:
+            self.tar_handler.fit(self.y)
+
+    def transform(self, X, y):
+        X = self.preprocessor.transform(X)
+        y = self.tar_handler.transform(y)
+        return X, y
+
+    def transform_column(self, X):
+        return self.preprocessor.transform(X)
+
+    def transform_y(self, y):
+        return self.tar_handler.transform(y)
 
     def get_column_pipeline(self):
         return self.preprocessor

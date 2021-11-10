@@ -1,6 +1,8 @@
 import numpy as np
 import scipy
 import torch
+from torch.autograd import Variable
+from tqdm import tqdm
 
 
 def binary_accuracy_tensor(preds, y):
@@ -18,26 +20,37 @@ def binary_accuracy_numpy(preds, y):
 
 
 class Evaluator:
-    def __init__(self, val, model, device, cls, criterion=torch.nn.BCELoss()):
-        self.val_x, self.val_y = val[0], val[1]
+    def __init__(self, val_loader, model, device, cls, criterion=torch.nn.BCELoss()):
+        self.val = val_loader
         self.device = device
         self.model = model
         self.model.eval()
         self.cls = cls
         self.criterion = criterion
         self.pred = []
-        self.labels = self.val_y
+        self.labels = []
 
     def eval(self):
-        x = self.val_x.todense().A if isinstance(self.val_x, scipy.sparse.csr.csr_matrix) else self.val_x
+        total_loss, total_acc = 0., 0.
+        length = 0
         with torch.no_grad():
-            x = torch.from_numpy(x).to(self.device).float()
-            y = torch.from_numpy(self.val_y).to(self.device).float()
-            preds = self.model(x)
-            if self.cls == 1:
-                preds = preds.squeeze()
-                loss = self.criterion(preds, y).item()
-                acc = binary_accuracy_tensor(preds, y)
-                self.pred = preds.cpu().numpy()
-        del x, y
-        return {"acc": acc, "loss": loss}
+            for i, data in enumerate(tqdm(self.val), 0):
+                x, label = data
+                x = x.float().to(self.device)
+                label = label.float().to(self.device)
+                output = self.model(x)
+                if self.cls == 1:
+                    try:
+                        output = output.squeeze()
+                        # print(output.size(), label.size())
+                        total_loss += self.criterion(output, label).item()*len(label)
+                        total_acc += binary_accuracy_tensor(output, label).item()*len(label)
+                        length += len(label)
+                        self.labels += list(label.cpu().numpy())
+                        self.pred += list(output.cpu().numpy())
+                    except Exception as e:
+                        print(f"exception: {e}")
+                        continue
+                del x, label
+        # print(self.pred)
+        return {"acc": total_acc/length, "loss": total_loss/length}

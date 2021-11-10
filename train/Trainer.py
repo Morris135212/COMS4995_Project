@@ -15,7 +15,7 @@ class Trainer:
                  val: tuple,
                  input_size,
                  cls,
-                 writer=SummaryWriter('runs/fashion_mnist_experiment_1'),
+                 writer=SummaryWriter('runs/isFraud'),
                  optimizer="sgd",
                  epochs=10,
                  batch_size=64,
@@ -29,6 +29,7 @@ class Trainer:
         self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         self.batch_size = batch_size
         self.valset = val
+        self.val_loader = DataLoader(CustomDataset(val[0], val[1]), batch_size=batch_size)
         self.trainset = train
         self.epochs = epochs
         if cls == 1:
@@ -79,7 +80,7 @@ class Trainer:
                 self.optim.step()
                 del x, y
                 if i % self.interval == self.interval - 1:
-                    evaluator = Evaluator(self.valset,
+                    evaluator = Evaluator(self.val_loader,
                                           model=self.model,
                                           device=self.device,
                                           cls=self.cls,
