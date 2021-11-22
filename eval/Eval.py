@@ -34,7 +34,7 @@ class Evaluator:
         total_loss, total_acc = 0., 0.
         length = 0
         with torch.no_grad():
-            for i, data in enumerate(tqdm(self.val), 0):
+            for i, data in enumerate(self.val, 0):
                 x, label = data
                 x = x.float().to(self.device)
                 label = label.float().to(self.device)

@@ -15,6 +15,7 @@ class Trainer:
                  val: tuple,
                  input_size,
                  cls,
+                 weight=None,
                  writer=SummaryWriter('runs/isFraud'),
                  optimizer="sgd",
                  epochs=10,
@@ -33,26 +34,29 @@ class Trainer:
         self.trainset = train
         self.epochs = epochs
         if cls == 1:
-            self.criterion = torch.nn.BCELoss()  # Binary cross entropy
+            self.criterion = torch.nn.BCELoss(size_average=True)  # Binary cross entropy
+            self.criterion.to(device=self.device)
         else:
-            self.criterion = torch.nn.CrossEntropyLoss()  # Cross Entropy Loss
+            self.criterion = torch.nn.CrossEntropyLoss(weight)  # Cross Entropy Loss
+            self.criterion.to(device=self.device)
 
         self.model = Model(input_size=input_size, output_size=cls)
+        self.model.to(self.device)
         self.cls = cls
         if optimizer == "adam":
             self.optim = torch.optim.Adam(self.model.parameters(), lr=lr)
         elif optimizer == "sgd":
             self.optim = torch.optim.SGD(self.model.parameters(), lr=lr, momentum=momentum)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=300, gamma=0.5)
         self.writer = writer
         self.interval = interval
         self.early_stopping = EarlyStopping(patience=patience, verbose=True, path=path)
 
     def train(self):
         print("Start Training")
-        self.model.to(self.device)
         for epoch in range(self.epochs):
             print(f"At epoch: {epoch}")
-            total_loss, epoch_loss, epoch_acc = 0., 0., 0.
+            epoch_loss, epoch_acc = 0., 0.
             length = 0
             for i, data in enumerate(tqdm(self.train_loader), 0):
                 self.model.train()
@@ -78,6 +82,7 @@ class Trainer:
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
+                self.scheduler.step()
                 del x, y
                 if i % self.interval == self.interval - 1:
                     evaluator = Evaluator(self.val_loader,

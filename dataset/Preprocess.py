@@ -1,7 +1,8 @@
+from category_encoders import TargetEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder, OrdinalEncoder
 
 
 class MissingHandler:
@@ -57,6 +58,8 @@ class Preprocess:
     def __init__(self, X, y, missing_handler,
                  num_features=None,
                  cate_features=None,
+                 ordinal_features=None,
+                 target_features=None,
                  labels=None):
 
         self.tar_handler = LabelEncoder()
@@ -65,28 +68,38 @@ class Preprocess:
         self.X = X
         self.missing_handler = missing_handler
 
-        def make_pipeline(num_f=None, cate_f=None):
+        def make_pipeline():
             t = self.X.dtypes
             columns = list(t.index)
+            cate_f, num_f = cate_features, num_features
             if not cate_f:
                 cate_f = list(t[(t == "object") | (t == "bool")].index)
             if not num_f:
-                num_f = list(filter(lambda x: x not in cate_f, columns))
+                # num_f = list(filter(lambda x: x not in cate_f, columns))
+                num_f = list(set(columns).difference(set(cate_f)))
             num_transformer = Pipeline(steps=self.missing_handler.num_transformer +
                                              [("scaler", StandardScaler())])
             oh_cate_transformer = Pipeline(steps=self.missing_handler.cate_transformer +
-                                              [("onehot", OneHotEncoder(handle_unknown="ignore"))])
-            # tar_cate_transformer = Pipeline(steps=self.missing_handler.cate_transformer +
-            #                                   [("onehot", TargetEncoder(handle_unknown="value"))])
+                                                 [("onehot", OneHotEncoder(handle_unknown="ignore"))])
+            transformers = [("num", num_transformer, num_f)]
+            if ordinal_features:
+                ord_cate_transformer = Pipeline(steps=self.missing_handler.cate_transformer +
+                                                      [("ordinal", OrdinalEncoder(handle_unknown="ignore"))])
+                cate_f = list(set(cate_f).difference(set(ordinal_features)))
+                transformers.append(("ordinal", ord_cate_transformer, ordinal_features))
+            if target_features:
+                tar_cate_transformer = Pipeline(steps=self.missing_handler.cate_transformer +
+                                                      [("onehot", TargetEncoder(handle_unknown="value"))])
+                cate_f = list(set(cate_f).difference(set(target_features)))
+                transformers.append(("ordinal", tar_cate_transformer, target_features))
+            transformers.append(("onehot", oh_cate_transformer, cate_f))
             preprocessor = ColumnTransformer(
-                transformers=[
-                    ("num", num_transformer, num_f),
-                    ("cat", oh_cate_transformer, cate_f)
-                ]
+                transformers=transformers
             )
+            print(num_f, cate_f, ordinal_features, target_features)
             return preprocessor
 
-        self.preprocessor = make_pipeline(num_features, cate_features)
+        self.preprocessor = make_pipeline()
 
     def __fit__(self):
         self.fit_column()
