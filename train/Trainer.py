@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from dataset.Dataset import CustomDataset
 from eval.Eval import Evaluator, binary_accuracy_tensor
+from eval.loss import FocalLoss
 from model.ANN import Model
 from torch.utils.tensorboard import SummaryWriter
 from utils.torchtools import EarlyStopping
@@ -15,6 +16,7 @@ class Trainer:
                  val: tuple,
                  input_size,
                  cls,
+                 focal=False,
                  weight=None,
                  writer=SummaryWriter('runs/isFraud'),
                  optimizer="sgd",
@@ -34,7 +36,10 @@ class Trainer:
         self.trainset = train
         self.epochs = epochs
         if cls == 1:
-            self.criterion = torch.nn.BCELoss(size_average=True)  # Binary cross entropy
+            if focal:
+                self.criterion = FocalLoss()
+            else:
+                self.criterion = torch.nn.BCELoss(size_average=True)  # Binary cross entropy
             self.criterion.to(device=self.device)
         else:
             self.criterion = torch.nn.CrossEntropyLoss(weight)  # Cross Entropy Loss
@@ -92,8 +97,8 @@ class Trainer:
                                           criterion=self.criterion)
                     results = evaluator.eval()
                     eval_acc, eval_loss = results["acc"], results["loss"]
-                    print(f"At epoch {epoch}, eval Acc: {eval_acc}, train Acc: {epoch_acc / length},"
-                          f"train loss: {epoch_loss / length}, val loss: {eval_loss}")
+                    # print(f"At epoch {epoch}, eval Acc: {eval_acc}, train Acc: {epoch_acc / length},"
+                    #       f"train loss: {epoch_loss / length}, val loss: {eval_loss}")
 
                     self.writer.add_scalars('loss/', {"eval_loss": eval_loss,
                                                       "train_loss": epoch_loss / length},

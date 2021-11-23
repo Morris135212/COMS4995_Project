@@ -31,6 +31,7 @@ if __name__ == "__main__":
     trainer = Trainer((train_x, train_y),
                       (val_x, val_y),
                       train_x.shape[1],
+                      focal=True,
                       cls=1,
                       writer=writer,
                       lr=1e-3,
