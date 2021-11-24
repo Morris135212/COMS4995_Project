@@ -62,7 +62,6 @@ class Evaluator:
                     total_loss += self.criterion(output, label).item()*len(label)
                     total_acc += multi_accuracy_tensor(output, label)*len(label)
                     length += len(label)
-                    length += len(label)
                     self.labels += list(label.cpu().numpy())
                     self.pred += list(output.cpu().numpy())
                 del x, label

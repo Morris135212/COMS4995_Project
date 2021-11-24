@@ -1,11 +1,12 @@
 from dataset.Preprocess import Preprocess, MissingHandler
 from dataset.Sampling import Sampling, SampleMechanism
 from eval.Eval import Evaluator
-from model.ANN import Model
+from model.ANN import Model, weights_init
 from train.Trainer import Trainer
 from utils.read_file import read_from_csv
 from sklearn.model_selection import train_test_split
 
+"""
 if __name__ == "__main__":
     file = "data/transaction.csv"
     df = read_from_csv(file)
@@ -42,3 +43,8 @@ if __name__ == "__main__":
     # model = Model(input_size=train_x.shape[1], output_size=1)
     # e = Evaluator(val_loader, model, device=torch.device("cpu"), cls=1)
     # e.eval()
+"""
+if __name__=="__main__":
+    model = Model(input_size=7000, output_size=2)
+    model.apply(weights_init)
+    print(model)

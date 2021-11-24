@@ -1,6 +1,18 @@
 import torch.nn as nn
-import torch.nn.functional as F
 import torch
+
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        print("Initialize Bathch")
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+    elif classname.find('Linear') != -1:
+        print("Initialize Linear")
+        nn.init.kaiming_normal(m.weight)
 
 
 class Model(nn.Module):
@@ -10,14 +22,13 @@ class Model(nn.Module):
         self.layer1 = nn.Sequential(
             nn.Linear(input_size, n_hidden1),
             nn.BatchNorm1d(n_hidden1),
-            nn.ReLU(True),
+            nn.ReLU(),
             nn.Dropout(0.5)
         )
         self.layer2 = nn.Sequential(
             nn.Linear(n_hidden1, n_hidden2),
             nn.BatchNorm1d(n_hidden2),
-            nn.ReLU(True),
-            nn.Dropout(0.5)
+            nn.ReLU()
         )
 
         self.layer3 = nn.Sequential(
@@ -30,5 +41,7 @@ class Model(nn.Module):
         X = self.layer3(X)
         if self.cls == 1:
             X = torch.sigmoid(X)
+        else:
+            X = torch.softmax(X, dim=1)
         return X
 

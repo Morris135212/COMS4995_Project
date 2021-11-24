@@ -5,7 +5,7 @@ from tqdm import tqdm
 from dataset.Dataset import CustomDataset
 from eval.Eval import Evaluator, binary_accuracy_tensor, multi_accuracy_tensor
 from eval.loss import FocalLoss
-from model.ANN import Model
+from model.ANN import Model, weights_init
 from torch.utils.tensorboard import SummaryWriter
 from utils.torchtools import EarlyStopping
 
@@ -16,6 +16,7 @@ class Trainer:
                  val: tuple,
                  input_size,
                  cls,
+                 initialize=True,
                  focal=False,
                  weight=None,
                  writer=SummaryWriter('runs/isFraud'),
@@ -42,17 +43,20 @@ class Trainer:
                 self.criterion = torch.nn.BCELoss(size_average=True)  # Binary cross entropy
             self.criterion.to(device=self.device)
         else:
-            self.criterion = torch.nn.CrossEntropyLoss(weight)  # Cross Entropy Loss
+            self.criterion = torch.nn.CrossEntropyLoss(weight=weight)  # Cross Entropy Loss
             self.criterion.to(device=self.device)
 
         self.model = Model(input_size=input_size, output_size=cls)
+        if initialize:
+            self.model.apply(weights_init)
         self.model.to(self.device)
         self.cls = cls
         if optimizer == "adam":
             self.optim = torch.optim.Adam(self.model.parameters(), lr=lr)
         elif optimizer == "sgd":
             self.optim = torch.optim.SGD(self.model.parameters(), lr=lr, momentum=momentum)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=300, gamma=0.5)
+        # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=300, gamma=0.5)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optim, 0.5)
         self.writer = writer
         self.interval = interval
         self.early_stopping = EarlyStopping(patience=patience, verbose=True, path=path)
@@ -99,8 +103,8 @@ class Trainer:
                                           criterion=self.criterion)
                     results = evaluator.eval()
                     eval_acc, eval_loss = results["acc"], results["loss"]
-                    # print(f"At epoch {epoch}, eval Acc: {eval_acc}, train Acc: {epoch_acc / length},"
-                    #       f"train loss: {epoch_loss / length}, val loss: {eval_loss}")
+                    print(f"At epoch {epoch}, eval Acc: {eval_acc}, train Acc: {epoch_acc / length},"
+                          f"train loss: {epoch_loss / length}, val loss: {eval_loss}")
 
                     self.writer.add_scalars('loss/', {"eval_loss": eval_loss,
                                                       "train_loss": epoch_loss / length},
