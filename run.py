@@ -32,7 +32,7 @@ if __name__ == "__main__":
                       (val_x, val_y),
                       train_x.shape[1],
                       focal=True,
-                      cls=1,
+                      cls=2,
                       writer=writer,
                       lr=1e-3,
                       interval=50)

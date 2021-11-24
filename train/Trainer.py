@@ -3,7 +3,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from dataset.Dataset import CustomDataset
-from eval.Eval import Evaluator, binary_accuracy_tensor
+from eval.Eval import Evaluator, binary_accuracy_tensor, multi_accuracy_tensor
 from eval.loss import FocalLoss
 from model.ANN import Model
 from torch.utils.tensorboard import SummaryWriter
@@ -65,22 +65,24 @@ class Trainer:
             length = 0
             for i, data in enumerate(tqdm(self.train_loader), 0):
                 self.model.train()
-
                 x, label = data
                 x = x.float()
-                label = label.float()
                 x = Variable(x).to(self.device)
-                y = Variable(label).to(self.device)
                 output = self.model(x)
-
                 if self.cls == 1:
+                    label = label.float()
+                    y = Variable(label).to(self.device)
                     output = output.squeeze()
                     loss = self.criterion(output, y)
                     epoch_loss += loss.item() * len(label)
                     epoch_acc += binary_accuracy_tensor(output, y.squeeze()).item() * len(label)
                     length += len(label)
                 else:
+                    y = Variable(label).to(self.device)
                     loss = self.criterion(output, y)
+                    epoch_loss += loss.item() * len(label)
+                    epoch_acc += multi_accuracy_tensor(output, y)*len(label)
+                    length += len(label)
                     """
                     TODO multi-classification
                     """
@@ -88,7 +90,7 @@ class Trainer:
                 loss.backward()
                 self.optim.step()
                 self.scheduler.step()
-                del x, y
+                del x
                 if i % self.interval == self.interval - 1:
                     evaluator = Evaluator(self.val_loader,
                                           model=self.model,
