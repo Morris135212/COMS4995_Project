@@ -81,25 +81,31 @@ class Preprocess:
                                              [("scaler", StandardScaler())])
             oh_cate_transformer = Pipeline(steps=self.missing_handler.cate_transformer +
                                                  [("onehot", OneHotEncoder(handle_unknown="ignore"))])
-            transformers = [("num", num_transformer, num_f)]
+            transformers, col_cate, col_num = [], [], []
             if ordinal_features:
                 ord_cate_transformer = Pipeline(steps=self.missing_handler.cate_transformer +
-                                                      [("ordinal", OrdinalEncoder(handle_unknown="ignore"))])
+                                                      [("ordinal", OrdinalEncoder(handle_unknown="error"))])
                 cate_f = list(set(cate_f).difference(set(ordinal_features)))
                 transformers.append(("ordinal", ord_cate_transformer, ordinal_features))
+                col_cate.append(ordinal_features)
             if target_features:
                 tar_cate_transformer = Pipeline(steps=self.missing_handler.cate_transformer +
-                                                      [("onehot", TargetEncoder(handle_unknown="value"))])
+                                                      [("target", TargetEncoder(handle_unknown="value"))])
                 cate_f = list(set(cate_f).difference(set(target_features)))
-                transformers.append(("ordinal", tar_cate_transformer, target_features))
+                transformers.append(("target", tar_cate_transformer, target_features))
+                col_cate.append(target_features)
             transformers.append(("onehot", oh_cate_transformer, cate_f))
+            col_cate.append(cate_f)
+            transformers.append(("num", num_transformer, num_f))
+            col_num.append(num_f)
             preprocessor = ColumnTransformer(
                 transformers=transformers
             )
-            print(num_f, cate_f, ordinal_features, target_features)
-            return preprocessor
+            print(f"num_f: {num_f}, cate_f: {cate_f}, ordinal_features: {ordinal_features}, "
+                  f"target_features: {target_features}")
+            return preprocessor, col_cate, col_num
 
-        self.preprocessor = make_pipeline()
+        self.preprocessor, self.col_cate, self.col_num = make_pipeline()
 
     def __fit__(self):
         self.fit_column()

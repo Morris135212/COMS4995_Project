@@ -14,8 +14,9 @@ class Trainer:
     def __init__(self,
                  train: tuple,
                  val: tuple,
-                 input_size,
+                 # input_size,
                  cls,
+                 model,
                  initialize=True,
                  focal=False,
                  weight=None,
@@ -24,7 +25,7 @@ class Trainer:
                  epochs=10,
                  batch_size=64,
                  lr=1e-5,
-                 momentum=1e-5,
+                 momentum=0.5,
                  interval=10,
                  patience=10,
                  path="data/checkpoints/checkpoint.pt"):
@@ -46,7 +47,8 @@ class Trainer:
             self.criterion = torch.nn.CrossEntropyLoss(weight=weight)  # Cross Entropy Loss
             self.criterion.to(device=self.device)
 
-        self.model = Model(input_size=input_size, output_size=cls)
+        # self.model = Model(input_size=input_size, output_size=cls)
+        self.model = model
         if initialize:
             self.model.apply(weights_init)
         self.model.to(self.device)
@@ -55,8 +57,8 @@ class Trainer:
             self.optim = torch.optim.Adam(self.model.parameters(), lr=lr)
         elif optimizer == "sgd":
             self.optim = torch.optim.SGD(self.model.parameters(), lr=lr, momentum=momentum)
-        # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=300, gamma=0.5)
-        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optim, 0.5)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=300, gamma=0.5)
+        # self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optim, 0.5)
         self.writer = writer
         self.interval = interval
         self.early_stopping = EarlyStopping(patience=patience, verbose=True, path=path)
@@ -76,13 +78,18 @@ class Trainer:
                 if self.cls == 1:
                     label = label.float()
                     y = Variable(label).to(self.device)
-                    output = output.squeeze()
+                    try:
+                        output = output.squeeze()
+                    except Exception as e:
+                        output = output[2].squeeze()
                     loss = self.criterion(output, y)
                     epoch_loss += loss.item() * len(label)
                     epoch_acc += binary_accuracy_tensor(output, y.squeeze()).item() * len(label)
                     length += len(label)
                 else:
                     y = Variable(label).to(self.device)
+                    if isinstance(output, tuple):
+                        output =output[2]
                     loss = self.criterion(output, y)
                     epoch_loss += loss.item() * len(label)
                     epoch_acc += multi_accuracy_tensor(output, y)*len(label)

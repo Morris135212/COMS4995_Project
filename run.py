@@ -1,10 +1,44 @@
+from dataset.Encoder import DateHourEncoder, DateMonthEncoder, DateWeekEncoder, DateYearEncoder
 from dataset.Preprocess import Preprocess, MissingHandler
+import numpy as np
 from dataset.Sampling import Sampling, SampleMechanism
 from eval.Eval import Evaluator
-from model.ANN import Model, weights_init
+from model.ANN import Model, weights_init, EntityEmbeddingNN
 from train.Trainer import Trainer
 from utils.read_file import read_from_csv
 from sklearn.model_selection import train_test_split
+
+
+if __name__ == "__main__":
+    file = "data/transaction.csv"
+    df = read_from_csv(file)
+    df = df.sample(n=200000, random_state=23)
+    df = df.drop(
+        ["accountNumber", "accountOpenDate", "dateOfLastAddressChange", "currentExpDate", "transactionDateTime"],
+        axis=1)
+    handler = MissingHandler(df, impute=False, target="isFraud")
+    X, y = handler.get_features(), handler.get_labels()
+
+    # Threeway hold out
+    dev_x, test_x, dev_y, test_y = train_test_split(X, y, test_size=0.2, random_state=23, stratify=y)
+    train_x, val_x, train_y, val_y = train_test_split(dev_x, dev_y, test_size=0.25, random_state=23, stratify=dev_y)
+
+    p = Preprocess(dev_x, dev_y, handler)
+    p.__fit__()
+
+    train_x, train_y = p.preprocessor.transform(train_x), p.tar_handler.transform(train_y)
+    val_x, val_y = p.preprocessor.transform(val_x), p.tar_handler.transform(val_y)
+    test_x, test_y = p.preprocessor.transform(test_x), p.tar_handler.transform(test_y)
+
+    cate_f = p.col_cate[0]
+    num_f = p.col_num[0]
+    # print(cate_f, num_f)
+    n_uniques = p.preprocessor.transformers_[0][1]['onehot'].categories_
+    n_uniques = [len(n) for n in n_uniques]
+    n_numeric = len(num_f)
+    entityembedding = EntityEmbeddingNN(np.array(n_uniques))
+    # print(n_uniques)
+
 
 """
 if __name__ == "__main__":
@@ -44,7 +78,9 @@ if __name__ == "__main__":
     # e = Evaluator(val_loader, model, device=torch.device("cpu"), cls=1)
     # e.eval()
 """
+"""
 if __name__=="__main__":
     model = Model(input_size=7000, output_size=2)
     model.apply(weights_init)
     print(model)
+"""

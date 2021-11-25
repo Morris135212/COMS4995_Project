@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 import torch
-from torch.autograd import Variable
+import torch.nn.functional as F
 from tqdm import tqdm
 
 
@@ -47,7 +47,10 @@ class Evaluator:
                 if self.cls == 1:
                     try:
                         label = label.float().to(self.device)
-                        output = output.squeeze()
+                        try:
+                            output = output.squeeze()
+                        except Exception as e:
+                            output = output[2].squeeze()
                         # print(output.size(), label.size())
                         total_loss += self.criterion(output, label).item()*len(label)
                         total_acc += binary_accuracy_tensor(output, label).item()*len(label)
@@ -59,11 +62,13 @@ class Evaluator:
                         continue
                 else:
                     label = label.to(self.device)
+                    if isinstance(output, tuple):
+                        output = output[2]
                     total_loss += self.criterion(output, label).item()*len(label)
                     total_acc += multi_accuracy_tensor(output, label)*len(label)
                     length += len(label)
                     self.labels += list(label.cpu().numpy())
-                    self.pred += list(output.cpu().numpy())
+                    self.pred += list(F.softmax(output, dim=1).cpu().numpy())
                 del x, label
         # print(self.pred)
         return {"acc": total_acc/length, "loss": total_loss/length}
