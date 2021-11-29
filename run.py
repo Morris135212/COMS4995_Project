@@ -36,7 +36,7 @@ if __name__ == "__main__":
     n_uniques = p.preprocessor.transformers_[0][1]['onehot'].categories_
     n_uniques = [len(n) for n in n_uniques]
     n_numeric = len(num_f)
-    entityembedding = EntityEmbeddingNN(np.array(n_uniques))
+    entityembedding = EntityEmbeddingNN(np.array(n_uniques), n_numeric)
     # print(n_uniques)
 
 

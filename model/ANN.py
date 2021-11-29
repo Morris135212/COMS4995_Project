@@ -53,8 +53,8 @@ class EntityEmbeddingNN(nn.Module):
             n_uniques: np.ndarray,
             n_numeric: int,
             A=10, B=5,
-            dropout1=0.1,
-            dropout2=0.1,
+            dropout1=0.5,
+            dropout2=0.5,
             n_class=2
     ):
         super(EntityEmbeddingNN, self).__init__()
@@ -112,12 +112,6 @@ class EntityEmbeddingNN(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, X):
-        embeds = []
-        last = 0
-        # for i, embedding in enumerate(self.embeddings):
-        #     current = last+self.n_uniques[i]
-        #     embeds.append(self.embeddings[i](X[:, last:current].int()))
-        #     last = current
         embeds = [self.embeddings[i](X[:, i].int())
                   for i in range(len(self.n_uniques))]
         embeds.append(X[:, len(self.n_uniques):])
