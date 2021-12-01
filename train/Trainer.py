@@ -22,6 +22,7 @@ class Trainer:
                  weight=None,
                  writer=SummaryWriter('runs/isFraud'),
                  optimizer="sgd",
+                 step_size=500,
                  epochs=10,
                  batch_size=64,
                  lr=1e-5,
@@ -57,7 +58,7 @@ class Trainer:
             self.optim = torch.optim.Adam(self.model.parameters(), lr=lr)
         elif optimizer == "sgd":
             self.optim = torch.optim.SGD(self.model.parameters(), lr=lr, momentum=momentum)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=300, gamma=0.5)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=step_size, gamma=0.5)
         # self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optim, 0.5)
         self.writer = writer
         self.interval = interval
