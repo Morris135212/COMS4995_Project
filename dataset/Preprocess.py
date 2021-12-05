@@ -16,7 +16,7 @@ class MissingHandler:
         self.imputer = {"num":
                             {"SimpleImputer": ("Impute", SimpleImputer(strategy="mean"))},
                         "cate":
-                            {"SimpleImputer": ("Impute", SimpleImputer(strategy="most_frequent"))}
+                            {"SimpleImputer": ("Impute", SimpleImputer(strategy="constant", fill_value="UNK"))}
                         }
 
         def missing_handler(n_imputer="SimpleImputer", c_imputer="SimpleImputer"):
