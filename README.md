@@ -15,7 +15,13 @@ Code for EDA is under visualization folder
 
 ### Model
 We have trained 5 different models: Neural Network, Random Forest, GBDT, XGBoost, SVM.
-Training code for Neural Network can be seen in the train.ipynb.\\
-Training code for Random Forest can be seen in the model/Random Forest.ipynb\\
-Training code for XGBoost can be seen in the model/XGBoost performance tuning.ipynb\\
+Training code for Neural Network can be seen in the train.ipynb.
+
+Training code for Random Forest can be seen in the model/Random Forest.ipynb
+
+Training code for XGBoost can be seen in the model/XGBoost performance tuning.ipynb
+
 Training code for GBDT can be seen in the 
+
+### Results
+You can see all the results saved as pkl if it is for Random Forest, GBDT, XGBoost, SVM. In pt form if it is for neural network
